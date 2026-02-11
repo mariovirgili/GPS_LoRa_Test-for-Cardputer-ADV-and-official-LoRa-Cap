@@ -1,4 +1,5 @@
 # 📡 Initial version v0.9 - M5Cardputer LoRa & GPS Field Tester
+Vibe coded with Gemini Pro
 
 **M5Cardputer LoRa & GPS Field Tester v0.9** is a robust, all-in-one firmware designed for the **M5Stack Cardputer** equipped with the **Official LoRa868 Module (SX1262 + ATGM336H)**.
 
