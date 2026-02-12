@@ -1,3 +1,26 @@
+# 🚀 Initial Release v1.0
+
+This is the first stable release of the **M5Cardputer LoRa & GPS Test Firmware**.
+Designed to be a standalone field diagnostic tool for the **Official M5Stack LoRa868 Module** (SX1262 + ATGM336H).
+
+### 🌟 Key Features
+* **Boot Diagnostics:** Automatic hardware check for LoRa and GPS chips on startup.
+* **Power Control:** Toggle GPS power on/off (Press `P`) to save battery.
+* **Precision GPS Monitor:** Real-time coordinates, altitude, speed, and UTC time.
+* **Dual-Mode LoRa Terminal:**
+    * *Chat Mode:* Type and send text messages.
+    * *Command Mode:* Quick shortcuts for Range Testing (`PING`) and Geo-Location sharing (`GEO-BEACON`).
+* **RF Sniffer:** Visual spectrum analyzer for 868MHz band.
+* **Dynamic SF:** Switch Spreading Factors (SF7-SF12) on the fly.
+
+### 📦 Hardware
+* Device: M5Stack Cardputer
+* Module: M5Stack LoRa868 Cap
+
+### ⬇️ Installation
+Download the source code and compile with PlatformIO.
+
+Old release README.md
 # 📡 Initial version v0.9 - M5Cardputer LoRa & GPS Field Tester
 Vibe coded with Gemini Pro
 
