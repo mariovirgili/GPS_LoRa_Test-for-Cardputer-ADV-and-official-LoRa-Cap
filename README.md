@@ -1,65 +1,57 @@
-# 🚀 Initial Release v1.0
+# 📡 M5Cardputer LoRa & GPS Test Firmware v1.1
 
-This is the first stable release of the **M5Cardputer LoRa & GPS Test Firmware**.
-Designed to be a standalone field diagnostic tool for the **Official M5Stack LoRa868 Module** (SX1262 + ATGM336H).
+A robust, standalone firmware designed for the **M5Stack Cardputer** equipped with the **Official LoRa868 Module (SX1262 + ATGM336H)**.
 
-### 🌟 Key Features
-* **Boot Diagnostics:** Automatic hardware check for LoRa and GPS chips on startup.
-* **Power Control:** Toggle GPS power on/off (Press `P`) to save battery.
-* **Precision GPS Monitor:** Real-time coordinates, altitude, speed, and UTC time.
-* **Dual-Mode LoRa Terminal:**
-    * *Chat Mode:* Type and send text messages.
-    * *Command Mode:* Quick shortcuts for Range Testing (`PING`) and Geo-Location sharing (`GEO-BEACON`).
-* **RF Sniffer:** Visual spectrum analyzer for 868MHz band.
-* **Dynamic SF:** Switch Spreading Factors (SF7-SF12) on the fly.
-
-### 📦 Hardware
-* Device: M5Stack Cardputer
-* Module: M5Stack LoRa868 Cap
-
-### ⬇️ Installation
-Download the source code and compile with PlatformIO.
-
-Old release README.md
-# 📡 Initial version v0.9 - M5Cardputer LoRa & GPS Field Tester
-Vibe coded with Gemini Pro
-
-**M5Cardputer LoRa & GPS Field Tester v0.9** is a robust, all-in-one firmware designed for the **M5Stack Cardputer** equipped with the **Official LoRa868 Module (SX1262 + ATGM336H)**.
-
-Its primary purpose is to act as a **Field Testing & Diagnostics Tool** to validate the capabilities of the hardware cap. It allows users to verify GPS signal acquisition, test LoRa range with different Spreading Factors, and visualize radio spectrum activity.
+**Note:** This is a dedicated hardware diagnostic and field testing tool. It is *not* intended to be a substitute for mesh networking firmwares like Meshtastic. Its primary purpose is to validate hardware integrity, test LoRa range with different Spreading Factors, check GPS lock capabilities, and visualize radio spectrum activity.
 
 ---
 
-## ⚡ Features
+## ⚡ Key Features (Updated in v1.1)
 
-### 1. 🌍 GPS Navigator Mode
-* Real-time display of **Latitude, Longitude, Altitude, and Speed (km/h)**.
+### 🛠️ Boot Diagnostics & Frequency Selection
+* **Hardware Self-Test:** On startup, the firmware probes the SPI bus to verify the SX1262 chip is alive and responding. This immediately tells you if your hardware is fried, badly seated, or working perfectly.
+* **Worldwide Frequencies:** After passing the hardware check, you can select your regional operating frequency (**433, 868, 915, or 923 MHz**). *(Note: The official M5Stack module antenna is tuned for 868MHz; using other frequencies works in software but will have reduced physical range).*
+
+### 🌍 GPS Navigator & Power Control
+* Real-time display of **Latitude, Longitude, Altitude, and Speed (km/h)** (2-decimal precision).
 * Satellite count and UTC Time synchronization.
-* **Fix Status:** Visual indication of fix acquisition vs. searching.
-* **Data Logging:** Logs NMEA data to USB Serial every 5 seconds.
+* **GPS Power Toggle:** Press `P` to turn the GPS module ON or OFF, saving precious battery life when you only need to use the radio.
 
-### 2. 💬 LoRa Terminal & Chat
-* **Real-time Chat:** Type messages using the Cardputer keyboard.
-* **Dual-Mode Interface:** seamless switching between Typing and Command modes.
-* **GeoBeacon:** One-press transmission of current GPS coordinates.
-* **Range Test (Ping):** Sends a ping packet with current SF info to test signal reach.
-* **Receive Log:** Displays RSSI (Signal Strength) and SNR (Signal-to-Noise Ratio) for incoming packets.
+### 💬 LoRa Terminal & Chat
+* **Dual-Mode Interface:** Seamlessly switch between typing regular messages and sending quick commands.
+* **GeoBeacon:** One-press transmission of your current GPS coordinates.
+* **Range Test (Ping):** Send a ping packet to test signal reach.
+* **Smart Feedback:** The top header provides visual confirmation (`SENDING PING...`, `SENDING GEO...`, `TX: SENDING...`).
 
-### **Due to lack of LoRa Clients in my zone, I need testers for the LoRa Terminal!**
-
-### 3. 📉 LoRa Sniffer
+### 📉 LoRa RF Sniffer
 * Visual **RSSI Spectrum Analyzer**.
-* Real-time graph to detect radio activity and noise floor in the 868MHz band.
-* Helps verify antenna performance and environmental interference.
+* Real-time scrolling graph to detect radio activity, bursts, and noise floor in your selected frequency band.
 
 ---
 
-## 🛠 Hardware Requirements
+## 📖 User Manual & Controls
 
-* **M5Stack Cardputer** (ESP32-S3)
-* **M5Stack LoRa868 Module** (The "Cap" with SX1262 LoRa + ATGM336H GPS)
+### Global Navigation
+* **`G`**: Switch to **GPS Monitor**.
+* **`L`**: Switch to **LoRa Terminal**.
+* **`S`**: Switch to **RSSI Sniffer**.
+* **`H`**: Open **On-Screen Help**.
+* **`P`**: **Toggle GPS Power ON/OFF**.
+* **`TAB`**: Cycle **Spreading Factor (SF)** (SF7, SF9, SF12).
 
-### 🔌 Pinout Configuration (Hardcoded)
+### ⌨️ LoRa Terminal Controls (Dual-Stage)
+1. **Typing Mode (Default):** Type freely and press **`ENTER`** to send. Press **`ESC`** (or **`\``**) to enter Command Mode.
+2. **Command Mode (Red Border):** * **`SPACE`**: Send **PING** (Range Test).
+   * **`ENTER`**: Send **GeoBeacon** (GPS Coordinates).
+   * *Press any letter key:* Return to Typing Mode.
+   * *Press `ESC` again:* Exit app to GPS Monitor.
+
+---
+
+## 🔌 Hardware & Pinout (Hardcoded)
+* **Device:** M5Stack Cardputer (ESP32-S3)
+* **Module:** M5Stack LoRa868 Cap
+
 | Component | Pin Function | GPIO |
 | :--- | :--- | :--- |
 | **LoRa (SX1262)** | CS | 5 |
@@ -74,43 +66,13 @@ Its primary purpose is to act as a **Field Testing & Diagnostics Tool** to valid
 
 ---
 
-## 📖 User Manual & Controls
-
-### Global Navigation
-* **`G`**: Switch to **GPS Monitor**.
-* **`L`**: Switch to **LoRa Terminal**.
-* **`S`**: Switch to **RSSI Sniffer**.
-* **`H`**: Open **On-Screen Help**.
-* **`TAB`**: Cycle **Spreading Factor (SF)**.
-    * *SF 7:* Fast speed, lower range.
-    * *SF 9:* Balanced (Default).
-    * *SF 12:* Slow speed, maximum range (Long distance).
-
-### ⌨️ LoRa Terminal Controls
-The terminal features a **Two-Stage Logic** to handle both typing and quick commands:
-
-1.  **Typing Mode (Default):**
-    * Type freely on the keyboard.
-    * **`ENTER`**: Send the typed message.
-    * **`ESC`** (or **`\``**): Switch to **Command Mode**.
-
-2.  **Command Mode (Red Border):**
-    * **`SPACE`**: Send **PING** (Range Test).
-    * **`ENTER`**: Send **GeoBeacon** (Current GPS Coordinates).
-    * *Press any letter key:* Return to Typing Mode.
-    * *Press `ESC` again:* Exit to Main Menu.
-
----
-
 ## 💻 Installation (PlatformIO)
 
-1.  Clone this repository.
-2.  Open the folder in **VS Code** with the **PlatformIO** extension installed.
-3.  Ensure your `platformio.ini` matches the board settings:
+Ensure your `platformio.ini` matches these stable settings:
 
 ```ini
 [env:m5stack-stamps3]
-platform = espressif32
+platform = espressif32@6.6.0
 board = m5stack-stamps3
 framework = arduino
 lib_deps = 
@@ -122,10 +84,9 @@ lib_deps =
 monitor_speed = 115200
 build_flags = 
     -DCORE_DEBUG_LEVEL=0
-    -DARDUINO_USB_CDC_ON_BOOT=1
+    -DARDUINO_USB_CDC_ON_BOOT=1 
+    -DARDUINO_USB_MODE=1
 ```
-
-4. Build and Upload to your Cardputer.
 
 ### 📄 License
 MIT License
