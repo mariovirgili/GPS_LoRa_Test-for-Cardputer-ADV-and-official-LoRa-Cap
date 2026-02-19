@@ -1,11 +1,10 @@
 /**
- * M5Cardputer LoRa & GPS Test Firmware v1.0 - POWER CONTROL
- * * STATUS: GOLD MASTER (Final Release).
- * * * FEATURES:
- * - BOOT DIAGNOSTIC: Hardware self-test on startup.
- * - GPS POWER: Toggle GPS On/Off with 'P' key.
- * - LORA TERMINAL: Chat mode & Command mode.
- * - SNIFFER: Real-time RSSI spectrum.
+ * M5Cardputer LoRa & GPS Test Firmware v1.1 - LOGIC SWAP
+ * * STATUS: REFINED BOOT SEQUENCE.
+ * * * CHANGES:
+ * - BOOT ORDER FLIPPED: 1. Diagnostics -> 2. Freq Selection -> 3. App.
+ * - Hardware check uses a safe default (868Mhz) just to verify SPI connection.
+ * - Frequency selection now happens immediately before main runtime start.
  * * * HARDWARE:
  * - GPS: UART1 (RX=15, TX=13, Baud=115200)
  * - LoRa: SX1262 (CS=5, RST=3, IRQ=4, BUSY=6, TCXO=1.6V)
@@ -18,7 +17,7 @@
 #include <SPI.h>
 
 // --- VERSION DEFINITION ---
-#define FW_VERSION "v1.0"
+#define FW_VERSION "v1.1"
 
 // --- PIN DEFINITIONS ---
 #define GPS_RX_PIN     15
@@ -54,8 +53,12 @@ AppMode currentMode = MODE_GPS;
 ChatState chatState = CHAT_TYPING;
 bool fullRedrawNeeded = true;
 
+// Global Radio Settings
+float currentFrequency = 868.0; 
+int currentSF = 9;
+
 // GPS State
-bool gpsEnabled = true;       // Track GPS Power State
+bool gpsEnabled = true;       
 bool wasFix = false;       
 bool firstRunGPS = true;   
 
@@ -64,7 +67,6 @@ String oldLoRaMessage = "";
 float lastRssi = 0;
 float lastSnr = 0;
 int sniffCursorX = 0;
-int currentSF = 9;
 
 // Chat / Input Variables
 String inputBuffer = "";
@@ -75,21 +77,22 @@ int helpPage = 0;
 const int MAX_HELP_PAGES = 5; 
 
 // ==========================================
-// --- INITIALIZATION & DIAGNOSTICS ---
+// --- INITIALIZATION & SETUP MENUS ---
 // ==========================================
 
 void initGPS() {
     gpsSerial.begin(GPS_BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
 }
 
-// Function used during normal runtime to change SF
+// Function used during normal runtime to start/restart radio
 void initLoRaRuntime() {
     SPI.begin(LORA_SCK_PIN, LORA_MISO_PIN, LORA_MOSI_PIN, LORA_CS_PIN);
-    int state = radio.begin(868.0, 125.0, currentSF, 7, 0x12, 10, 8, LORA_TCXO_VOLT, false);
+    // Use selected frequency
+    int state = radio.begin(currentFrequency, 125.0, currentSF, 7, 0x12, 10, 8, LORA_TCXO_VOLT, false);
     if (state == RADIOLIB_ERR_NONE) radio.startReceive();
 }
 
-// === DIAGNOSTIC SCREEN FUNCTION ===
+// 1. DIAGNOSTIC SCREEN FUNCTION (First Step)
 void runSystemCheck() {
     M5.Display.fillScreen(BLACK);
     M5.Display.fillRect(0, 0, SCREEN_WIDTH, HEADER_HEIGHT, DARKGREY);
@@ -98,7 +101,7 @@ void runSystemCheck() {
     M5.Display.setCursor(5, 5);
     M5.Display.print("HARDWARE SELF-TEST");
 
-    // 1. TEST GPS
+    // TEST GPS
     initGPS();
     M5.Display.setTextColor(LIGHTGREY, BLACK);
     M5.Display.setCursor(5, 35);
@@ -106,12 +109,13 @@ void runSystemCheck() {
     M5.Display.setTextColor(GREEN, BLACK);
     M5.Display.print("[READY]");
 
-    // 2. TEST LORA
+    // TEST LORA (Hardware Presence Check)
     M5.Display.setTextColor(LIGHTGREY, BLACK);
     M5.Display.setCursor(5, 55);
     M5.Display.print("LORA (SX1262): ");
     
     SPI.begin(LORA_SCK_PIN, LORA_MISO_PIN, LORA_MOSI_PIN, LORA_CS_PIN);
+    // Uses 868.0 as a safe "probe" frequency just to check SPI ID
     int state = radio.begin(868.0, 125.0, 9, 7, 0x12, 10, 8, LORA_TCXO_VOLT, false);
     
     if (state == RADIOLIB_ERR_NONE) {
@@ -131,7 +135,7 @@ void runSystemCheck() {
         else M5.Display.print("Unknown Hardware Error");
     }
 
-    // 3. WAIT FOR USER
+    // WAIT FOR USER
     M5.Display.drawFastHLine(0, SCREEN_HEIGHT - 25, SCREEN_WIDTH, WHITE);
     M5.Display.setTextColor(WHITE, BLACK);
     M5.Display.setCursor(30, SCREEN_HEIGHT - 18);
@@ -142,11 +146,52 @@ void runSystemCheck() {
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
             Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
             if (status.enter) {
+                // Short flash to acknowledge
                 M5.Display.fillScreen(BLACK);
+                delay(100); 
                 return; 
             }
         }
     }
+}
+
+// 2. Frequency Selection Menu (Second Step)
+void selectFrequency() {
+    M5.Display.fillScreen(BLACK);
+    M5.Display.fillRect(0, 0, SCREEN_WIDTH, HEADER_HEIGHT, DARKGREY);
+    M5.Display.setTextColor(WHITE, DARKGREY);
+    M5.Display.setTextSize(1.5);
+    M5.Display.setCursor(5, 5);
+    M5.Display.print("SELECT REGION / FREQ");
+
+    M5.Display.setTextColor(LIGHTGREY, BLACK);
+    M5.Display.setTextSize(1.5);
+    M5.Display.setCursor(10, 35); M5.Display.print("1. 433 MHz (Asia/EU)");
+    M5.Display.setCursor(10, 55); M5.Display.print("2. 868 MHz (EU/Africa)");
+    M5.Display.setCursor(10, 75); M5.Display.print("3. 915 MHz (US/Amer)");
+    M5.Display.setCursor(10, 95); M5.Display.print("4. 923 MHz (Asia/Jap)");
+
+    M5.Display.setTextColor(CYAN, BLACK);
+    M5.Display.setCursor(10, 118); 
+    M5.Display.print("Press 1, 2, 3 or 4");
+
+    while (true) {
+        M5Cardputer.update();
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            if (M5Cardputer.Keyboard.isKeyPressed('1')) { currentFrequency = 433.0; break; }
+            if (M5Cardputer.Keyboard.isKeyPressed('2')) { currentFrequency = 868.0; break; }
+            if (M5Cardputer.Keyboard.isKeyPressed('3')) { currentFrequency = 915.0; break; }
+            if (M5Cardputer.Keyboard.isKeyPressed('4')) { currentFrequency = 923.0; break; }
+        }
+    }
+
+    // Confirmation Flash
+    M5.Display.fillScreen(BLACK);
+    M5.Display.setCursor(40, 60);
+    M5.Display.setTextColor(GREEN, BLACK);
+    M5.Display.setTextSize(2);
+    M5.Display.printf("%.0f MHz SET", currentFrequency);
+    delay(1000);
 }
 
 // ==========================================
@@ -154,7 +199,7 @@ void runSystemCheck() {
 // ==========================================
 
 void logGPSToSerial() {
-    if (!gpsEnabled) return; // Don't log if off
+    if (!gpsEnabled) return;
 
     if (gps.location.isValid()) {
         Serial.printf("[GPS] FIX: YES | Lat: %.6f | Lon: %.6f | Alt: %.0fm | Sats: %d\r\n", 
@@ -175,10 +220,10 @@ void flashHeader(String text) {
 void toggleGPS() {
     gpsEnabled = !gpsEnabled;
     if (gpsEnabled) {
-        initGPS(); // Restart Serial
+        initGPS(); 
         flashHeader("GPS POWER ON");
     } else {
-        gpsSerial.end(); // Stop Serial
+        gpsSerial.end(); 
         flashHeader("GPS POWER OFF");
     }
     delay(500);
@@ -251,7 +296,8 @@ void drawStaticHeader(String title, uint16_t color) {
     M5.Display.print(title);
     
     if (currentMode != MODE_HELP) {
-        M5.Display.setCursor(170, 5);
+        // Shifted X slightly to make space if needed
+        M5.Display.setCursor(165, 5);
         M5.Display.printf("[SF %d]", currentSF);
     }
     
@@ -302,7 +348,7 @@ void updateHelpMode() {
             M5.Display.println(" [L] LoRa Chat/Term");
             M5.Display.println(" [S] RSSI Sniffer");
             M5.Display.println("");
-            M5.Display.println(" [P] GPS On/Off Toggle"); // ADDED
+            M5.Display.println(" [P] GPS On/Off Toggle");
         }
         else if (helpPage == 2) {
             M5.Display.println("LORA CHAT (1/2):");
@@ -343,10 +389,9 @@ void updateHelpMode() {
 }
 
 void updateGPSMode() {
-    // If GPS is OFF, show simple message
     if (!gpsEnabled) {
         if (fullRedrawNeeded) {
-            drawStaticHeader("GPS MONITOR " + String(FW_VERSION), DARKGREY); // Grey header indicates disabled
+            drawStaticHeader("GPS MONITOR " + String(FW_VERSION), DARKGREY); 
             M5.Display.fillRect(0, HEADER_HEIGHT, SCREEN_WIDTH, FOOTER_Y - HEADER_HEIGHT, BLACK);
             
             M5.Display.setTextColor(RED, BLACK);
@@ -358,7 +403,6 @@ void updateGPSMode() {
         return; 
     }
 
-    // Normal GPS Logic
     bool isFix = gps.location.isValid();
     
     if (fullRedrawNeeded || (isFix != wasFix) || firstRunGPS) {
@@ -488,7 +532,13 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("\r\n\r\n>> GRANITICA %s - BOOTING <<\r\n", FW_VERSION);
     
+    // 1. RUN DIAGNOSTICS FIRST (Checks Hardware presence)
     runSystemCheck();
+
+    // 2. SELECT FREQUENCY (Sets global currentFrequency)
+    selectFrequency();
+    
+    // 3. START RUNTIME (Configures radio with chosen settings)
     initLoRaRuntime();
     
     drawStaticHeader("SYSTEM READY", BLUE);
@@ -499,7 +549,6 @@ void setup() {
 void loop() {
     M5Cardputer.update();
     
-    // Only read GPS if enabled
     if (gpsEnabled) {
         while (gpsSerial.available()) gps.encode(gpsSerial.read());
     }
@@ -553,7 +602,6 @@ void loop() {
                 if (M5Cardputer.Keyboard.isKeyPressed(' ')) { sendPing(); chatState = CHAT_TYPING; fullRedrawNeeded = true; }
                 if (status.enter) { sendGeoBeacon(); chatState = CHAT_TYPING; fullRedrawNeeded = true; }
                 
-                // Toggle GPS in Command Mode as well? Let's allow it in Navigation/Command mode
                 if (M5Cardputer.Keyboard.isKeyPressed('p')) toggleGPS();
 
                 for (auto c : status.word) {
@@ -591,12 +639,10 @@ void loop() {
             if (M5Cardputer.Keyboard.isKeyPressed('l')) { currentMode = MODE_LORA_TERM; chatState = CHAT_TYPING; fullRedrawNeeded = true; }
             if (M5Cardputer.Keyboard.isKeyPressed('s')) { currentMode = MODE_LORA_SNIFFER; fullRedrawNeeded = true; }
             
-            // ACTIONS
             if (status.enter) sendGeoBeacon();
             if (M5Cardputer.Keyboard.isKeyPressed(KEY_TAB)) changeSF();
             if (M5Cardputer.Keyboard.isKeyPressed(' ')) sendPing();
             
-            // NEW: GPS POWER TOGGLE
             if (M5Cardputer.Keyboard.isKeyPressed('p')) toggleGPS();
         }
     }
